@@ -1,0 +1,6 @@
+data
+.ipynb_checkpoints
+data_calibrated
+*.ipynb
+*.pyc
+tests
