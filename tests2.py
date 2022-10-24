@@ -11,14 +11,14 @@ from tensorflow.keras.utils import to_categorical
 from libs.models_creation import SimpleDNN_Model, ResNet_Model, VGG16_Model
 import libs.visualization_package as vis
 import libs.utils as utils
-# tf.random.set_seed(1234)
+tf.random.set_seed(1234)
 
 
 test_params = {
   "model" : "ResNet",
   "dataset" : "CIFAR100",
   "learning_type" : "FBCL",
-  "epoch_start_test" : [15],
+  "epoch_start_test" : [15,30],
   "batch_size" : 32,
   "epochs" : 50,
 }
@@ -34,8 +34,7 @@ if __name__ == '__main__':
   DATASET = test_params["dataset"]
   TEST_NUMBER = f"{datetime.now()}_{MODEL_TYPE}{BATCH_SIZE}_{DATASET}"
   DATA_FOLDER_PATH = os.path.join(PROGRAM_PATH, "data_calibrated", DATASET)
-  CHECKPOINT_PATH = os.path.join(PROGRAM_PATH, "tests",TEST_NUMBER, "checkpoints", test_params["model"])
-  #CHECKPOINT_PATH = "/workplace/tests/2022-07-27 19:48:40.769633_ResNet32_CIFAR100/checkpoints/ResNet"
+  CHECKPOINT_PATH = os.path.join(DATA_FOLDER_PATH, "checkpoints", test_params["model"])
   FIG_SAVE_PATH = os.path.join(PROGRAM_PATH, "tests", TEST_NUMBER,"pictures")
   RESULT_SAVE_PATH = os.path.join(PROGRAM_PATH, "tests", TEST_NUMBER, "results")
   TEST_EPOCH_START = np.array(test_params['epoch_start_test']) - 1
@@ -85,35 +84,14 @@ if __name__ == '__main__':
   y_train = to_categorical(y_train)
   y_valid = to_categorical(y_valid)
 
-  # X_train, y_train = X_train[:150], y_train[:150]
+  # X_train, y_train = X_train[:15000], y_train[:15000]
   # X_valid, y_valid = X_valid[:50], y_valid[:50]
   # X_test, y_test = X_test[:50], y_test[:50]
   
-  
-  # Fitowanie modelu
-  model, history = utils.my_fit_function(model, X_train, y_train, (X_valid, y_valid), EPOCHS, BATCH_SIZE, CHECKPOINT_PATH, TEST_EPOCH_START)
-  # podsumowanie dokładności modelui
-  vis.visualize_accuracy(history, "accuracy", FIG_SAVE_PATH)
-  
-  # podsumowanie funkcji strat modelu
-  vis.visualize_loss(history, "loss", FIG_SAVE_PATH)
-  # prediction = np.argmax(model(X_test, training=False), axis=1)
-  predictions = np.argmax(model.predict(X_test, batch_size = BATCH_SIZE), axis=1)
-  metrics1 = accuracy_score(y_test, predictions)
-  trainableParams = np.sum([np.prod(v.get_shape()) for v in model.trainable_weights])
-  nonTrainableParams = np.sum([np.prod(v.get_shape()) for v in model.non_trainable_weights])
-  totalParams = trainableParams + nonTrainableParams
-  history["Test_acc"] = metrics1
-  history["trainable_params"] = trainableParams
-  history["non_trainable_params"] = nonTrainableParams
-  history["total_params"] = totalParams
-  normal_training_df = pd.DataFrame.from_dict(history)
-  
-
   for epoch_start in TEST_EPOCH_START:
     temp_cascade_df = pd.DataFrame([])
 
-    for learning_type in ["RSCL"]:
+    for learning_type in ["FBCL","BFCL", "RSCL"]:
       if MODEL_TYPE == "SimpleDNN":
         model_class = SimpleDNN_Model(input_shape, 10, output_shape)
         model = model_class.create_model()
@@ -158,13 +136,9 @@ if __name__ == '__main__':
       else:
         temp_cascade_df = pd.concat([temp_cascade_df, cascade_training_df_temp])
       print(f"""
-      First model is {metrics1*100}% accurate
       Second model is {metrics2*100}% accurate""")
-    vis.visualize_loss_full(normal_training_df, temp_cascade_df, "loss", FIG_SAVE_PATH)
-    vis.visualize_accuracy_full(normal_training_df, temp_cascade_df, "accuracy", FIG_SAVE_PATH)
     if cascade_df.empty:
       cascade_df = temp_cascade_df
     else:
       cascade_df = pd.concat([cascade_df, temp_cascade_df])
-  normal_training_df.to_parquet(os.path.join(RESULT_SAVE_PATH, "normal_training.parquet"))
   cascade_df.to_parquet(os.path.join(RESULT_SAVE_PATH, "cascade_training.parquet"))

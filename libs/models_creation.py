@@ -3,6 +3,20 @@ from tensorflow.keras.applications.resnet50 import ResNet50
 from tensorflow.keras.applications import VGG16
 from tensorflow.keras.layers import Dense, AveragePooling2D, Flatten, Input
 from tensorflow.keras.losses import CategoricalCrossentropy
+import tensorflow as tf
+
+# gpus = tf.config.list_physical_devices('GPU')
+# if gpus:
+#   # Restrict TensorFlow to only allocate 1GB of memory on the first GPU
+#   try:
+#     tf.config.set_logical_device_configuration(
+#         gpus[0],
+#         [tf.config.LogicalDeviceConfiguration(memory_limit=3072)])
+#     logical_gpus = tf.config.list_logical_devices('GPU')
+#     print(len(gpus), "Physical GPUs,", len(logical_gpus), "Logical GPUs")
+#   except RuntimeError as e:
+#     # Virtual devices must be set before GPUs have been initialized
+#     print(e)
 
 
 class ResNet_Model(Model):
@@ -28,7 +42,7 @@ class ResNet_Model(Model):
 class VGG16_Model(Model):
     def __init__(self, num_classes, input_shape, layers):
         super().__init__()
-        downloaded_model = VGG16(weights=None, input_tensor=Input(shape=input_shape),include_top=False)
+        downloaded_model = VGG16(weights="imagenet", input_tensor=Input(shape=input_shape),include_top=False)
         model = Sequential()
         model.add(downloaded_model)
         model.add(Flatten(name="flatten"))
@@ -66,4 +80,5 @@ class SimpleDNN_Model(Model):
               name='categorical_crossentropy'
             )
     self.model.compile(optimizer="Adam", loss=loss, metrics=["accuracy"])
+    print(self.model.summary)
     return self.model
